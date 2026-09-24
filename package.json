@@ -12,6 +12,7 @@
     "demo2": "tsx src/middlew/demo2-ordine.ts",
     "demo3": "tsx src/middlew/demo3-prebuilt.ts",
     "demo4": "tsx src/middlew/demo4-hitl.ts",
+    "demo4fix": "tsx src/middlew/demo4-hitl-fixes.ts",
     "demo5": "tsx src/middlew/demo5-custom.ts"
   },
   "dependencies": {

@@ -88,12 +88,30 @@ const PRICING_PER_M_TOKENS: Record<string, { input: number; output: number }> =
     "grok-build-0.1": { input: 1.0, output: 2.0 }, // cel mai ieftin
   };
 
+function pricingFor(model: string): { input: number; output: number } | undefined {
+  const key = model.toLowerCase();
+  const exact = PRICING_PER_M_TOKENS[key];
+  if (exact) return exact;
+
+  // Azure/OpenAI trimit adesea 'gpt-4o-mini-2024-07-18'. Căutăm cea mai lungă
+  // cheie din tabel care e prefix al numelui, ca să nu întoarcem 0 / n/a.
+  let best: { input: number; output: number } | undefined;
+  let bestLen = 0;
+  for (const [k, v] of Object.entries(PRICING_PER_M_TOKENS)) {
+    if (key.startsWith(k) && k.length > bestLen) {
+      best = v;
+      bestLen = k.length;
+    }
+  }
+  return best;
+}
+
 export function calculateCost(
   model: string,
   inputTokens: number,
   outputTokens: number,
 ): number {
-  const pricing = PRICING_PER_M_TOKENS[model.toLowerCase()];
+  const pricing = pricingFor(model);
   if (!pricing) {
     // Model necunoscut — întoarce 0 ca să nu crape UI-ul.
     // Adaugă model-ul în PRICING_PER_M_TOKENS dacă e nou.

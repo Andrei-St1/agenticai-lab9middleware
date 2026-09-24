@@ -64,7 +64,16 @@ export function resetJurnal(): void {
  * Fara pasul asta, calculateCost intoarce 0 si te intrebi de ce.
  */
 function numeModelCurat(brut: string): string {
-  return brut.replace(/-\d{8}$/, "").toLowerCase();
+  return brut
+    .replace(/-\d{4}-\d{2}-\d{2}$/, "") // Azure/OpenAI: gpt-4o-mini-2024-07-18
+    .replace(/-\d{8}$/, "") // Anthropic: claude-haiku-4-5-20251001
+    .toLowerCase();
+}
+
+/** Gemini (și alții) nu pun modelul în response_metadata; îl luăm din request. */
+function numeDinRequest(request: { model?: unknown }): string | undefined {
+  const m = request.model as { model?: string; modelName?: string } | undefined;
+  return m?.model ?? m?.modelName;
 }
 
 /**
@@ -102,6 +111,7 @@ export function auditLogger(optiuni: { verbose?: boolean } = {}) {
       const numeBrut =
         (raspuns.response_metadata?.model_name as string | undefined) ??
         (raspuns.response_metadata?.model as string | undefined) ??
+        numeDinRequest(request) ??
         "necunoscut";
       const nume = numeModelCurat(numeBrut);
 
