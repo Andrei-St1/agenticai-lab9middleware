@@ -4,7 +4,7 @@ import { travelTools } from "./tools.js";
 import type { Graph } from "@langchain/core/runnables/graph";
 
 const agent = createAgent({
-  model: "anthropic:claude-sonnet-4-5",
+  model: "google-genai:gemini-2.5-flash",
   tools: travelTools,
   systemPrompt: "You are a travel assistant. Answer briefly and to the point.",
 });

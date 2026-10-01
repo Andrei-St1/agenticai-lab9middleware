@@ -6,7 +6,7 @@ import {
   MessagesAnnotation,
 } from "@langchain/langgraph";
 import { ToolNode } from "@langchain/langgraph/prebuilt";
-import { ChatAnthropic } from "@langchain/anthropic";
+import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import {
   SystemMessage,
   HumanMessage,
@@ -14,7 +14,7 @@ import {
 } from "@langchain/core/messages";
 import { travelTools } from "./tools.js";
 
-const model = new ChatAnthropic({ model: "claude-sonnet-4-5" }).bindTools(
+const model = new ChatGoogleGenerativeAI({ model: "gemini-2.5-flash" }).bindTools(
   travelTools,
 );
 

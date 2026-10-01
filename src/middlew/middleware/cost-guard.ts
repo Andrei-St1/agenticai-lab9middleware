@@ -50,7 +50,10 @@ const PRAG_LUNGIME = 120;
  */
 export function esteSimpla(text: string): boolean {
   if (text.length > PRAG_LUNGIME) return false;
-  if (CUVINTE_GRELE.test(text)) return false;
+  // Scoatem diacriticele inainte de regex: «Explică-mi» nu se potrivea cu
+  // «explica», deci o intrebare grea ajungea pe modelul ieftin.
+  const fara = text.normalize("NFD").replace(/[̀-ͯ]/g, "");
+  if (CUVINTE_GRELE.test(fara)) return false;
   return true;
 }
 

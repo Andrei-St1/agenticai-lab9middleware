@@ -7,7 +7,7 @@
 
 import "dotenv/config";
 import { RunnableSequence } from "@langchain/core/runnables";
-import { ChatAnthropic } from "@langchain/anthropic";
+import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import { z } from "zod";
 import { weather } from "./tools.js";
 
@@ -18,7 +18,7 @@ type State = {
   answer?: string;
 };
 
-const model = new ChatAnthropic({ model: "claude-sonnet-4-5" });
+const model = new ChatGoogleGenerativeAI({ model: "gemini-2.5-flash" });
 
 // Step 1 — pull the city name out of the question (structured output).
 async function extractCity(s: State): Promise<State> {

@@ -8,7 +8,7 @@
 
 import "dotenv/config";
 import { StateGraph, START, END, Annotation } from "@langchain/langgraph";
-import { ChatAnthropic } from "@langchain/anthropic";
+import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import { z } from "zod";
 import { weather } from "./tools.js";
 
@@ -19,7 +19,7 @@ const StateAnnotation = Annotation.Root({
   answer: Annotation<string>(),
 });
 
-const model = new ChatAnthropic({ model: "claude-sonnet-4-5" });
+const model = new ChatGoogleGenerativeAI({ model: "gemini-2.5-flash" });
 
 // Step 1 — pull the city name out of the question (structured output).
 async function extractCity(s: typeof StateAnnotation.State) {

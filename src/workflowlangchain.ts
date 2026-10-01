@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { ChatAnthropic } from "@langchain/anthropic";
+import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import {
   HumanMessage,
   SystemMessage,
@@ -9,7 +9,7 @@ import {
 import type { StructuredToolInterface } from "@langchain/core/tools";
 import { travelTools } from "./tools.js";
 
-const model = new ChatAnthropic({ model: "claude-sonnet-4-5" }).bindTools(
+const model = new ChatGoogleGenerativeAI({ model: "gemini-2.5-flash" }).bindTools(
   travelTools,
 );
 

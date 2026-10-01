@@ -15,6 +15,7 @@
  *   - OpenAI: OPENAI_API_KEY + OPENAI_MODEL
  *   - Anthropic: ANTHROPIC_API_KEY + ANTHROPIC_MODEL
  *   - xAI: XAI_API_KEY + XAI_MODEL (API OpenAI-compatibil)
+ *   - Qwen: QWEN_API_KEY + QWEN_MODEL + QWEN_BASE_URL (API OpenAI-compatibil)
  *   - Ollama (LOCAL) [+ Lab 3/4]: fără cheie — OLLAMA_MODEL (+ opțional OLLAMA_BASE_URL)
  *
  * Cursantul își sursează fișierul ~/.llm_* potrivit înainte de `pnpm dev`,
@@ -33,6 +34,7 @@ export type LlmProvider =
   | "openai"
   | "anthropic"
   | "xai"
+  | "qwen"
   | "ollama"; // [+ Lab 3/4] provider local
 
 // Max output tokens — destul pentru chat responses lungi.
@@ -66,6 +68,7 @@ export function readProviderFromEnv(): LlmProvider {
     raw === "openai" ||
     raw === "anthropic" ||
     raw === "xai" ||
+    raw === "qwen" ||
     raw === "ollama" // [+ Lab 3/4]
   ) {
     return raw;
@@ -73,7 +76,7 @@ export function readProviderFromEnv(): LlmProvider {
   throw new Error(
     `LLM_PROVIDER lipsește sau invalid (primit "${process.env.LLM_PROVIDER ?? ""}"). ` +
       // [+ Lab 3/4] adăugat "ollama" în lista de valori acceptate
-      `Valori acceptate: azureopenai | gemini | openai | anthropic | xai | ollama. ` +
+      `Valori acceptate: azureopenai | gemini | openai | anthropic | xai | qwen | ollama. ` +
       `Source fișierul ~/.llm_* potrivit sau setează în .env.local.`,
   );
 }
@@ -93,6 +96,8 @@ export function getActiveModelName(provider: LlmProvider): string {
       return process.env.ANTHROPIC_MODEL ?? "claude-haiku-4-5";
     case "xai":
       return process.env.XAI_MODEL ?? "grok-4.5";
+    case "qwen":
+      return process.env.QWEN_MODEL ?? "qwen3-6";
     case "ollama": // [+ Lab 3/4]
       return process.env.OLLAMA_MODEL ?? "qwen3:8b";
   }
@@ -113,6 +118,8 @@ export function getReasoningCapabilities(provider: LlmProvider): string {
       return "Reasoning summaries doar pentru deployment-uri de reasoning.";
     case "xai":
       return "Grok 4.x raționează implicit — reasoning afișat dacă e disponibil.";
+    case "qwen":
+      return "Qwen 3.6 prin endpoint OpenAI-compatibil — reasoning depinde de server.";
     case "ollama": // [+ Lab 3/4]
       return "Modele locale (ex. Qwen3) pot raționa; disponibilitatea depinde de model.";
   }
@@ -268,6 +275,22 @@ export function createModel(
         apiKey,
         model: modelName,
         configuration: { baseURL: "https://api.x.ai/v1" },
+      }) as unknown as BaseChatModel;
+    }
+
+    case "qwen": {
+      const apiKey = process.env.QWEN_API_KEY;
+      const baseURL = process.env.QWEN_BASE_URL;
+      if (!apiKey || !baseURL) {
+        throw new Error(
+          "QWEN_API_KEY sau QWEN_BASE_URL lipsă. Setează-le în .env.",
+        );
+      }
+      // OpenAI-compatible endpoint (c3po), so we can use ChatOpenAI
+      return new ChatOpenAI({
+        apiKey,
+        model: process.env.QWEN_MODEL ?? "qwen3-6",
+        configuration: { baseURL },
       }) as unknown as BaseChatModel;
     }
 
