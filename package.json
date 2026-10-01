@@ -15,7 +15,12 @@
     "demo4fix": "tsx src/middlew/demo4-hitl-fixes.ts",
     "demo5": "tsx src/middlew/demo5-custom.ts",
     "demo5mock": "tsx src/middlew/demo5-mock.ts",
-    "demo5ieftin": "tsx src/middlew/demo5-mock-ieftin.ts"
+    "demo5ieftin": "tsx src/middlew/demo5-mock-ieftin.ts",
+    "checklist1": "tsx src/tema1/checklist1.ts",
+    "checklist2": "tsx src/tema1/checklist2.ts",
+    "checklist4": "tsx src/tema1/checklist4.ts",
+    "checklist5": "tsx src/tema1/checklist5.ts",
+    "tema1:log": "tsx src/tema1/genereaza-log.ts"
   },
   "dependencies": {
     "@langchain/anthropic": "^1.5.9",
