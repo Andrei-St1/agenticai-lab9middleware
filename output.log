@@ -1,0 +1,115 @@
+==================== CHECKLIST 1 ====================
+Cand cautaClientSuport returneaza emailul, ce apare EFECTIV in ToolMessage-ul din istoric?
+
+$ pnpm checklist1
+[human] cauta clientul cl-101, vreau sa vad planul lui
+[ai] cauta clientul cl-101, vreau sa vad planul lui
+[tool] Client: Ana Radu | email: a***@example.com | plan: pro | card: **** **** **** 4242
+[ai] cauta clientul cl-101, vreau sa vad planul lui-cauta clientul cl-101, vreau sa vad planul lui-Client: Ana Radu | email: a***@example.com | plan: pro | card: **** **** **** 4242
+
+Raspuns: Emailul apare mascat in ToolMessage-ul din istoric: prima litera, apoi ***@ si domeniul (a***@example.com, nu ana.radu@example.com). Cardul nu e atins de middleware, pentru ca tool-ul intoarce deja doar ultimele 4 cifre.
+
+Linii citate din consola:
+  [tool] Client: Ana Radu | email: a***@example.com | plan: pro | card: **** **** **** 4242
+
+==================== CHECKLIST 2 ====================
+Script cu FakeToolCallingModel care cere 4 tool call-uri la rand. Ce se intampla la al 4-lea?
+
+$ pnpm checklist2
+[human] verifica de 4 ori clientul cl-101
+[ai] verifica de 4 ori clientul cl-101
+[tool] Client: Ana Radu | email: a***@example.com | plan: pro | card: **** **** **** 4242
+[ai] verifica de 4 ori clientul cl-101-verifica de 4 ori clientul cl-101-Client: Ana Radu | email: a***@example.com | plan: pro | card: **** **** **** 4242
+[tool] Client: Ana Radu | email: a***@example.com | plan: pro | card: **** **** **** 4242
+[ai] verifica de 4 ori clientul cl-101-verifica de 4 ori clientul cl-101-Client: Ana Radu | email: a***@example.com | plan: pro | card: **** **** **** 4242-verifica de 4 ori clientul cl-101-verifica de 4 ori clientul cl-101-Client: Ana Radu | email: a***@example.com | plan: pro | card: **** **** **** 4242-Client: Ana Radu | email: a***@example.com | plan: pro | card: **** **** **** 4242
+[tool] Client: Ana Radu | email: a***@example.com | plan: pro | card: **** **** **** 4242
+[ai] verifica de 4 ori clientul cl-101-verifica de 4 ori clientul cl-101-Client: Ana Radu | email: a***@example.com | plan: pro | card: **** **** **** 4242-verifica de 4 ori clientul cl-101-verifica de 4 ori clientul cl-101-Client: Ana Radu | email: a***@example.com | plan: pro | card: **** **** **** 4242-Client: Ana Radu | email: a***@example.com | plan: pro | card: **** **** **** 4242-verifica de 4 ori clientul cl-101-verifica de 4 ori clientul cl-101-Client: Ana Radu | email: a***@example.com | plan: pro | card: **** **** **** 4242-verifica de 4 ori clientul cl-101-verifica de 4 ori clientul cl-101-Client: Ana Radu | email: a***@example.com | plan: pro | card: **** **** **** 4242-Client: Ana Radu | email: a***@example.com | plan: pro | card: **** **** **** 4242-Client: Ana Radu | email: a***@example.com | plan: pro | card: **** **** **** 4242
+[tool] Tool call limit exceeded. Do not make additional tool calls.
+[ai] Tool call limit reached: run limit exceeded (4/3 calls).
+invoke() s-a intors normal, fara exceptie.
+
+Raspuns: Primele 3 apeluri se executa (3 mesaje [tool] cu datele clientului). Al 4-lea e blocat inainte sa ruleze tool-ul: toolCallLimitMiddleware adauga un ToolMessage de eroare si un mesaj AI final, iar invoke() se intoarce normal, fara exceptie.
+
+Linii citate din consola:
+  [tool] Tool call limit exceeded. Do not make additional tool calls.
+  [ai] Tool call limit reached: run limit exceeded (4/3 calls).
+  invoke() s-a intors normal, fara exceptie.
+
+==================== CHECKLIST 3 ====================
+Daca cerinta reala e "clientul sa nu sune de 10 ori pentru aceeasi problema, in ORICATE conversatii separate", runLimit sau threadLimit?
+
+(fara script: raspuns scris, cu linii din consola de la checklist 2 si 5)
+
+Raspuns: Niciunul. runLimit numara apelurile de tool dintr-o singura rulare si se reseteaza la finalul ei (afterAgent intoarce runToolCallCount: {}, node_modules/langchain/dist/agents/middleware/toolCallLimit.js:356), iar threadLimit numara pe tot thread-ul, dar ambele contoare sunt stare a grafului (:118-119, :271-272), salvata de checkpointer per thread_id, deci o conversatie noua porneste de la zero (in consola, fir-B are threadToolCallCount=1 dupa primul apel). Cerinta reala numara contactele CLIENTULUI despre aceeasi problema peste conversatii, deci cere stare persistenta in afara thread-ului (un store sau o tabela cheiata pe idClient + problema), nu un contor de tool call-uri. Am implementat cu runLimit, care e suficient pentru cerinta 2 a managementului doar in interiorul unei singure rulari: opreste bucla de cautari repetate dintr-o tura, dar nu limiteaza nimic intre turele aceleiasi conversatii si nici intre conversatii.
+
+Linii citate din consola:
+  [ai] Tool call limit reached: run limit exceeded (4/3 calls).
+  dupa resume: 12 mesaje | tichete escaladate: 2 | runToolCallCount={} threadToolCallCount={"__all__":4}
+  dupa invoke: 4 mesaje | intrerupere: escaladeazaTicket {"idTicket":"T-1","motiv":"client nemultumit"} | tichete escaladate: 2 | runToolCallCount={"__all__":1} threadToolCallCount={"__all__":1}
+
+==================== CHECKLIST 4 ====================
+(HITL) Rulati agentul FARA checkpointer, intentionat. Ce eroare exacta?
+
+$ pnpm checklist4
+Eroare: GraphValueError
+lc_error_code: MISSING_CHECKPOINTER
+message: No checkpointer set
+
+Troubleshooting URL: https://docs.langchain.com/oss/javascript/langgraph/MISSING_CHECKPOINTER/
+
+Tichete escaladate: 0
+
+Raspuns: GraphValueError cu lc_error_code MISSING_CHECKPOINTER si mesajul exact "No checkpointer set" (urmat de Troubleshooting URL). Apare cand HITL cere aprobare pentru escaladeazaTicket (interrupt() nu are unde salva starea), inainte ca tool-ul sa ruleze, deci tichetul nu s-a escaladat (Tichete escaladate: 0).
+
+Linii citate din consola:
+  Eroare: GraphValueError
+  lc_error_code: MISSING_CHECKPOINTER
+  message: No checkpointer set
+  Troubleshooting URL: https://docs.langchain.com/oss/javascript/langgraph/MISSING_CHECKPOINTER/
+  Tichete escaladate: 0
+
+==================== CHECKLIST 5 ====================
+(HITL) Rulati de doua ori acelasi flux, cu ACELASI thread_id o data si cu thread_id DIFERIT a doua oara, dupa ce ati aprobat prima escaladare. Ce diferenta observati?
+
+$ pnpm checklist5
+=== rularea 1 · thread_id "fir-A" ===
+dupa invoke: 4 mesaje | intrerupere: escaladeazaTicket {"idTicket":"T-1","motiv":"client nemultumit"} | tichete escaladate: 0 | runToolCallCount={"__all__":1} threadToolCallCount={"__all__":1}
+decizie trimisa: {"decisions":[{"type":"approve"}]}
+dupa resume: 6 mesaje | tichete escaladate: 1 | runToolCallCount={} threadToolCallCount={"__all__":2}
+
+=== rularea 2 · thread_id "fir-A" ===
+dupa invoke: 10 mesaje | intrerupere: escaladeazaTicket {"idTicket":"T-1","motiv":"client nemultumit"} | tichete escaladate: 1 | runToolCallCount={"__all__":1} threadToolCallCount={"__all__":3}
+decizie trimisa: {"decisions":[{"type":"approve"}]}
+dupa resume: 12 mesaje | tichete escaladate: 2 | runToolCallCount={} threadToolCallCount={"__all__":4}
+istoricul de pe "fir-A" dupa rularea 2:
+[human] clientul cl-101 e nemultumit, escaladeaza tichetul T-1
+[ai] clientul cl-101 e nemultumit, escaladeaza tichetul T-1
+[tool] Client: Ana Radu | email: a***@example.com | plan: pro | card: **** **** **** 4242
+[ai] clientul cl-101 e nemultumit, escaladeaza tichetul T-1-clientul cl-101 e nemultumit, escaladeaza tichetul T-1-Client: Ana Radu | email: a***@example.com | plan: pro | card: **** **** **** 4242
+[tool] Tichetul T-1 a fost escaladat catre om. Motiv: client nemultumit.
+[ai] clientul cl-101 e nemultumit, escaladeaza tichetul T-1-clientul cl-101 e nemultumit, escaladeaza tichetul T-1-Client: Ana Radu | email: a***@example.com | plan: pro | card: **** **** **** 4242-clientul cl-101 e nemultumit, escaladeaza tichetul T-1-clientul cl-101 e nemultumit, escaladeaza tichetul T-1-Client: Ana Radu | email: a***@example.com | plan: pro | card: **** **** **** 4242-Tichetul T-1 a fost escaladat catre om. Motiv: client nemultumit.
+[human] clientul cl-101 e nemultumit, escaladeaza tichetul T-1
+[ai] clientul cl-101 e nemultumit, escaladeaza tichetul T-1-clientul cl-101 e nemultumit, escaladeaza tichetul T-1-Client: Ana Radu | email: a***@example.com | plan: pro | card: **** **** **** 4242-clientul cl-101 e nemultumit, escaladeaza tichetul T-1-clientul cl-101 e nemultumit, escaladeaza tichetul T-1-Client: Ana Radu | email: a***@example.com | plan: pro | card: **** **** **** 4242-Tichetul T-1 a fost escaladat catre om. Motiv: client nemultumit.-clientul cl-101 e nemultumit, escaladeaza tichetul T-1-clientul cl-101 e nemultumit, escaladeaza tichetul T-1-Client: Ana Radu | email: a***@example.com | plan: pro | card: **** **** **** 4242-clientul cl-101 e nemultumit, escaladeaza tichetul T-1-clientul cl-101 e nemultumit, escaladeaza tichetul T-1-Client: Ana Radu | email: a***@example.com | plan: pro | card: **** **** **** 4242-Tichetul T-1 a fost escaladat catre om. Motiv: client nemultumit.-clientul cl-101 e nemultumit, escaladeaza tichetul T-1
+[tool] Client: Ana Radu | email: a***@example.com | plan: pro | card: **** **** **** 4242
+[ai] clientul cl-101 e nemultumit, escaladeaza tichetul T-1-clientul cl-101 e nemultumit, escaladeaza tichetul T-1-Client: Ana Radu | email: a***@example.com | plan: pro | card: **** **** **** 4242-clientul cl-101 e nemultumit, escaladeaza tichetul T-1-clientul cl-101 e nemultumit, escaladeaza tichetul T-1-Client: Ana Radu | email: a***@example.com | plan: pro | card: **** **** **** 4242-Tichetul T-1 a fost escaladat catre om. Motiv: client nemultumit.-clientul cl-101 e nemultumit, escaladeaza tichetul T-1-clientul cl-101 e nemultumit, escaladeaza tichetul T-1-Client: Ana Radu | email: a***@example.com | plan: pro | card: **** **** **** 4242-clientul cl-101 e nemultumit, escaladeaza tichetul T-1-clientul cl-101 e nemultumit, escaladeaza tichetul T-1-Client: Ana Radu | email: a***@example.com | plan: pro | card: **** **** **** 4242-Tichetul T-1 a fost escaladat catre om. Motiv: client nemultumit.-clientul cl-101 e nemultumit, escaladeaza tichetul T-1-clientul cl-101 e nemultumit, escaladeaza tichetul T-1-clientul cl-101 e nemultumit, escaladeaza tichetul T-1-Client: Ana Radu | email: a***@example.com | plan: pro | card: **** **** **** 4242-clientul cl-101 e nemultumit, escaladeaza tichetul T-1-clientul cl-101 e nemultumit, escaladeaza tichetul T-1-Client: Ana Radu | email: a***@example.com | plan: pro | card: **** **** **** 4242-Tichetul T-1 a fost escaladat catre om. Motiv: client nemultumit.-clientul cl-101 e nemultumit, escaladeaza tichetul T-1-clientul cl-101 e nemultumit, escaladeaza tichetul T-1-Client: Ana Radu | email: a***@example.com | plan: pro | card: **** **** **** 4242-clientul cl-101 e nemultumit, escaladeaza tichetul T-1-clientul cl-101 e nemultumit, escaladeaza tichetul T-1-Client: Ana Radu | email: a***@example.com | plan: pro | card: **** **** **** 4242-Tichetul T-1 a fost escaladat catre om. Motiv: client nemultumit.-clientul cl-101 e nemultumit, escaladeaza tichetul T-1-Client: Ana Radu | email: a***@example.com | plan: pro | card: **** **** **** 4242
+[tool] Tichetul T-1 a fost escaladat catre om. Motiv: client nemultumit.
+[ai] clientul cl-101 e nemultumit, escaladeaza tichetul T-1-clientul cl-101 e nemultumit, escaladeaza tichetul T-1-Client: Ana Radu | email: a***@example.com | plan: pro | card: **** **** **** 4242-clientul cl-101 e nemultumit, escaladeaza tichetul T-1-clientul cl-101 e nemultumit, escaladeaza tichetul T-1-Client: Ana Radu | email: a***@example.com | plan: pro | card: **** **** **** 4242-Tichetul T-1 a fost escaladat catre om. Motiv: client nemultumit.-clientul cl-101 e nemultumit, escaladeaza tichetul T-1-clientul cl-101 e nemultumit, escaladeaza tichetul T-1-Client: Ana Radu | email: a***@example.com | plan: pro | card: **** **** **** 4242-clientul cl-101 e nemultumit, escaladeaza tichetul T-1-clientul cl-101 e nemultumit, escaladeaza tichetul T-1-Client: Ana Radu | email: a***@example.com | plan: pro | card: **** **** **** 4242-Tichetul T-1 a fost escaladat catre om. Motiv: client nemultumit.-clientul cl-101 e nemultumit, escaladeaza tichetul T-1-clientul cl-101 e nemultumit, escaladeaza tichetul T-1-clientul cl-101 e nemultumit, escaladeaza tichetul T-1-Client: Ana Radu | email: a***@example.com | plan: pro | card: **** **** **** 4242-clientul cl-101 e nemultumit, escaladeaza tichetul T-1-clientul cl-101 e nemultumit, escaladeaza tichetul T-1-Client: Ana Radu | email: a***@example.com | plan: pro | card: **** **** **** 4242-Tichetul T-1 a fost escaladat catre om. Motiv: client nemultumit.-clientul cl-101 e nemultumit, escaladeaza tichetul T-1-clientul cl-101 e nemultumit, escaladeaza tichetul T-1-Client: Ana Radu | email: a***@example.com | plan: pro | card: **** **** **** 4242-clientul cl-101 e nemultumit, escaladeaza tichetul T-1-clientul cl-101 e nemultumit, escaladeaza tichetul T-1-Client: Ana Radu | email: a***@example.com | plan: pro | card: **** **** **** 4242-Tichetul T-1 a fost escaladat catre om. Motiv: client nemultumit.-clientul cl-101 e nemultumit, escaladeaza tichetul T-1-Client: Ana Radu | email: a***@example.com | plan: pro | card: **** **** **** 4242-clientul cl-101 e nemultumit, escaladeaza tichetul T-1-clientul cl-101 e nemultumit, escaladeaza tichetul T-1-Client: Ana Radu | email: a***@example.com | plan: pro | card: **** **** **** 4242-clientul cl-101 e nemultumit, escaladeaza tichetul T-1-clientul cl-101 e nemultumit, escaladeaza tichetul T-1-Client: Ana Radu | email: a***@example.com | plan: pro | card: **** **** **** 4242-Tichetul T-1 a fost escaladat catre om. Motiv: client nemultumit.-clientul cl-101 e nemultumit, escaladeaza tichetul T-1-clientul cl-101 e nemultumit, escaladeaza tichetul T-1-Client: Ana Radu | email: a***@example.com | plan: pro | card: **** **** **** 4242-clientul cl-101 e nemultumit, escaladeaza tichetul T-1-clientul cl-101 e nemultumit, escaladeaza tichetul T-1-Client: Ana Radu | email: a***@example.com | plan: pro | card: **** **** **** 4242-Tichetul T-1 a fost escaladat catre om. Motiv: client nemultumit.-clientul cl-101 e nemultumit, escaladeaza tichetul T-1-clientul cl-101 e nemultumit, escaladeaza tichetul T-1-clientul cl-101 e nemultumit, escaladeaza tichetul T-1-Client: Ana Radu | email: a***@example.com | plan: pro | card: **** **** **** 4242-clientul cl-101 e nemultumit, escaladeaza tichetul T-1-clientul cl-101 e nemultumit, escaladeaza tichetul T-1-Client: Ana Radu | email: a***@example.com | plan: pro | card: **** **** **** 4242-Tichetul T-1 a fost escaladat catre om. Motiv: client nemultumit.-clientul cl-101 e nemultumit, escaladeaza tichetul T-1-clientul cl-101 e nemultumit, escaladeaza tichetul T-1-Client: Ana Radu | email: a***@example.com | plan: pro | card: **** **** **** 4242-clientul cl-101 e nemultumit, escaladeaza tichetul T-1-clientul cl-101 e nemultumit, escaladeaza tichetul T-1-Client: Ana Radu | email: a***@example.com | plan: pro | card: **** **** **** 4242-Tichetul T-1 a fost escaladat catre om. Motiv: client nemultumit.-clientul cl-101 e nemultumit, escaladeaza tichetul T-1-Client: Ana Radu | email: a***@example.com | plan: pro | card: **** **** **** 4242-Tichetul T-1 a fost escaladat catre om. Motiv: client nemultumit.
+
+=== rularea 3 · thread_id "fir-B" ===
+dupa invoke: 4 mesaje | intrerupere: escaladeazaTicket {"idTicket":"T-1","motiv":"client nemultumit"} | tichete escaladate: 2 | runToolCallCount={"__all__":1} threadToolCallCount={"__all__":1}
+decizie trimisa: {"decisions":[{"type":"approve"}]}
+dupa resume: 6 mesaje | tichete escaladate: 3 | runToolCallCount={} threadToolCallCount={"__all__":2}
+
+Tichete escaladate (3):
+  T-1: escaladat catre om (client nemultumit)
+  T-1: escaladat catre om (client nemultumit)
+  T-1: escaladat catre om (client nemultumit)
+
+Raspuns: Acelasi thread_id (fir-A, rularea 2): agentul vede conversatia anterioara (10 mesaje dupa invoke, nu 4, iar istoricul incepe cu mesajele din rularea 1), dar cere din nou aprobare, pentru ca aprobarea tine de un singur interrupt, nu de tichet; dupa approve, tool-ul ireversibil se executa din nou si T-1 apare a doua oara in array. thread_id diferit (fir-B): istoric curat (4 mesaje, ca la rularea 1), contorul de thread porneste de la zero, o noua cerere de aprobare, iar array-ul creste la 3, pentru ca traieste in afara conversatiei. Checkpointer-ul si thread_id-ul delimiteaza memoria conversatiei, nu efectele; un tool ireversibil are nevoie de idempotenta proprie.
+
+Linii citate din consola:
+  dupa invoke: 10 mesaje | intrerupere: escaladeazaTicket {"idTicket":"T-1","motiv":"client nemultumit"} | tichete escaladate: 1 | runToolCallCount={"__all__":1} threadToolCallCount={"__all__":3}
+  dupa resume: 12 mesaje | tichete escaladate: 2 | runToolCallCount={} threadToolCallCount={"__all__":4}
+  dupa invoke: 4 mesaje | intrerupere: escaladeazaTicket {"idTicket":"T-1","motiv":"client nemultumit"} | tichete escaladate: 2 | runToolCallCount={"__all__":1} threadToolCallCount={"__all__":1}
+  dupa resume: 6 mesaje | tichete escaladate: 3 | runToolCallCount={} threadToolCallCount={"__all__":2}
+  Tichete escaladate (3):
